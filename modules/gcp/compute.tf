@@ -27,7 +27,7 @@ resource "google_service_account" "servers" {
   count = local.create_servers ? 1 : 0
 
   project      = var.project_id
-  account_id   = trim(substr("${local.name_prefix}-vm", 0, 30), "-")
+  account_id   = "${local.sa_prefix}-vm"
   display_name = "Servers for ${local.name_prefix}"
 }
 

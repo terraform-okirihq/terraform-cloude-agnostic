@@ -35,6 +35,8 @@ resource "aws_subnet" "this" {
   tags = merge(local.tags, {
     Name = "${local.name_prefix}-${each.key}"
     tier = each.value.public ? "public" : "private"
+    # Lets EKS / AWS Load Balancer Controller find subnets for load balancers.
+    (each.value.public ? "kubernetes.io/role/elb" : "kubernetes.io/role/internal-elb") = "1"
   })
 }
 
@@ -116,7 +118,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = local.kms_key_arn != null ? "aws:kms" : "AES256"
+      kms_master_key_id = local.kms_key_arn
     }
+    bucket_key_enabled = local.kms_key_arn != null
   }
 }

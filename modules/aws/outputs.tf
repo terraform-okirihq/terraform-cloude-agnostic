@@ -71,3 +71,57 @@ output "security_group_id" {
   description = "Security group attached to servers."
   value       = aws_security_group.servers.id
 }
+
+output "kubernetes" {
+  description = "Kubernetes cluster: { name, id, endpoint, version, kubeconfig_command } (null when disabled)."
+  value = local.k8s_enabled ? {
+    name               = aws_eks_cluster.this[0].name
+    id                 = aws_eks_cluster.this[0].arn
+    endpoint           = aws_eks_cluster.this[0].endpoint
+    version            = aws_eks_cluster.this[0].version
+    kubeconfig_command = "aws eks update-kubeconfig --region ${var.region} --name ${aws_eks_cluster.this[0].name}"
+  } : null
+}
+
+output "databases" {
+  description = "Map of database key => { engine, endpoint, port, database, username, credentials_secret }."
+  value = {
+    for k, db in aws_db_instance.this : k => {
+      engine             = db.engine
+      endpoint           = db.address
+      port               = local.databases[k].port
+      database           = db.db_name
+      username           = db.username
+      credentials_secret = try(db.master_user_secret[0].secret_arn, null)
+    }
+  }
+}
+
+output "containers" {
+  description = "Map of container key => { url } (url is null for private services)."
+  value = {
+    for k, c in local.containers : k => {
+      url = c.public ? "http://${aws_lb.containers[k].dns_name}" : null
+    }
+  }
+}
+
+output "functions" {
+  description = "Map of function key => { name, url }."
+  value = {
+    for k, f in aws_lambda_function.this : k => {
+      name = f.function_name
+      url  = aws_lambda_function_url.this[k].function_url
+    }
+  }
+}
+
+output "kms_key_id" {
+  description = "Customer-managed KMS key ARN (null unless security.customer_managed_keys)."
+  value       = local.kms_key_arn
+}
+
+output "alert_topic" {
+  description = "SNS topic ARN receiving alerts (null without alert_emails)."
+  value       = one(aws_sns_topic.alerts[*].arn)
+}

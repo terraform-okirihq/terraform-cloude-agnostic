@@ -17,6 +17,13 @@ module "aws" {
   servers               = var.servers
   admin_username        = var.admin_username
   ssh_public_key        = var.ssh_public_key
+  kubernetes            = var.kubernetes
+  databases             = var.databases
+  containers            = var.containers
+  functions             = var.functions
+  security              = var.security
+  monitoring            = var.monitoring
+  deletion_protection   = var.deletion_protection
 
   storage_force_destroy = var.storage_force_destroy
   availability_zones    = var.aws.availability_zones
@@ -38,6 +45,13 @@ module "azure" {
   servers               = var.servers
   admin_username        = var.admin_username
   ssh_public_key        = var.ssh_public_key
+  kubernetes            = var.kubernetes
+  databases             = var.databases
+  containers            = var.containers
+  functions             = var.functions
+  security              = var.security
+  monitoring            = var.monitoring
+  deletion_protection   = var.deletion_protection
 
   resource_group_name      = var.azure.resource_group_name
   storage_replication_type = var.azure.storage_replication_type
@@ -59,6 +73,13 @@ module "gcp" {
   servers               = var.servers
   admin_username        = var.admin_username
   ssh_public_key        = var.ssh_public_key
+  kubernetes            = var.kubernetes
+  databases             = var.databases
+  containers            = var.containers
+  functions             = var.functions
+  security              = var.security
+  monitoring            = var.monitoring
+  deletion_protection   = var.deletion_protection
 
   storage_force_destroy = var.storage_force_destroy
   project_id            = coalesce(var.gcp.project_id, "unset")

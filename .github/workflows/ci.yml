@@ -42,6 +42,7 @@ jobs:
           - examples/workspaces
           - examples/hcp-terraform
           - examples/multi-cloud
+          - examples/platform
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3

@@ -4,7 +4,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 6.0"
+      version = ">= 6.0, < 7.0"
     }
   }
 }
@@ -39,7 +39,7 @@ module "foundation" {
 
   servers = {
     web = {
-      subnet    = "public"
+      subnet    = "public-a"
       size      = "small"
       public_ip = true
       user_data = <<-EOT

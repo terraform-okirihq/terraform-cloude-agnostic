@@ -26,3 +26,11 @@ mock_resource "google_compute_instance" {
     }
   }
 }
+
+mock_data "google_project" {
+  defaults = { number = "123456789012" }
+}
+
+mock_resource "google_compute_network" {
+  defaults = { id = "projects/acme-dev-123/global/networks/acme-dev-vpc" }
+}

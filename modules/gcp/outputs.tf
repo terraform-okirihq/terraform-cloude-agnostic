@@ -65,3 +65,52 @@ output "nat_public_ip" {
   description = "Static egress IP of Cloud NAT (null when NAT is disabled)."
   value       = one(google_compute_address.nat[*].address)
 }
+
+output "kubernetes" {
+  description = "Kubernetes cluster: { name, id, endpoint, version, kubeconfig_command } (null when disabled)."
+  value = local.k8s_enabled ? {
+    name               = google_container_cluster.this[0].name
+    id                 = google_container_cluster.this[0].id
+    endpoint           = "https://${google_container_cluster.this[0].endpoint}"
+    version            = google_container_cluster.this[0].master_version
+    kubeconfig_command = "gcloud container clusters get-credentials ${google_container_cluster.this[0].name} --region ${var.region} --project ${var.project_id}"
+  } : null
+}
+
+output "databases" {
+  description = "Map of database key => { engine, endpoint, port, database, username, credentials_secret }."
+  value = {
+    for k, d in local.databases : k => {
+      engine             = d.engine
+      endpoint           = google_sql_database_instance.this[k].private_ip_address
+      port               = d.port
+      database           = d.db_name
+      username           = "dbadmin"
+      credentials_secret = google_secret_manager_secret.databases[k].id
+    }
+  }
+}
+
+output "containers" {
+  description = "Map of container key => { url } (url is null for private services)."
+  value = {
+    for k, c in local.containers : k => {
+      url = c.public ? google_cloud_run_v2_service.this[k].uri : null
+    }
+  }
+}
+
+output "functions" {
+  description = "Map of function key => { name, url }."
+  value = {
+    for k, f in google_cloudfunctions2_function.this : k => {
+      name = f.name
+      url  = f.url
+    }
+  }
+}
+
+output "kms_key_id" {
+  description = "Cloud KMS key ID (null unless security.customer_managed_keys)."
+  value       = local.kms_key_id
+}

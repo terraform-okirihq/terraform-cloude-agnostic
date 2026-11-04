@@ -6,8 +6,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A production-ready, cloud-agnostic Terraform module that deploys the same
-**network, NAT, firewall, servers and object storage** on **AWS, Azure or GCP**
-behind one shared interface. It works the same with plain `terraform apply`,
+**network, servers, Kubernetes, databases, containers, serverless functions,
+storage, security and monitoring** on **AWS, Azure or GCP** behind one shared
+interface. It works the same with plain `terraform apply`,
 Terraform CLI workspaces, HCP Terraform workspaces and CI/CD pipelines.
 
 | | AWS | Azure | GCP |
@@ -18,6 +19,14 @@ Terraform CLI workspaces, HCP Terraform workspaces and CI/CD pipelines.
 | Firewall | Security group: VPC-internal + `ingress_rules` | NSG on every subnet: `ingress_rules` | Firewall rules: internal + `ingress_rules` (by network tag) |
 | Servers | EC2 with IMDSv2, encrypted gp3, SSM role, key pair | Linux VM with SSH key only, managed identity, boot diagnostics | Shielded VM, dedicated least-privilege service account |
 | Storage | S3 bucket: versioned, SSE, public access blocked | Storage account (TLS 1.2, no public blobs, versioning) + private `data` container | GCS bucket: versioned, uniform access, public access prevention |
+| **Kubernetes** | EKS (API auth, secrets encryption, control-plane logs) + managed node group | AKS (Entra ID RBAC, Cilium overlay, workload identity, Container Insights) | GKE regional, private nodes, Dataplane V2, workload identity |
+| **Databases** | RDS PostgreSQL/MySQL, encrypted, password in Secrets Manager | Flexible Server via private endpoint, password in Key Vault | Cloud SQL on private IP, TLS only, password in Secret Manager |
+| **Containers** | ECS Fargate + ALB, CPU autoscaling | Container Apps | Cloud Run with Direct VPC egress |
+| **Functions** | Lambda in the VPC + function URL | Function App (Flex Consumption) + Application Insights | Cloud Functions 2nd gen |
+| **Security** | KMS key (rotation), VPC flow logs | Key Vault (RBAC, purge protection) | Cloud KMS (rotation), subnet flow logs |
+| **Monitoring** | CloudWatch alarms → SNS email | Log Analytics + metric alerts → action group email | Cloud Monitoring alert policies → email |
+
+Everything beyond the network is **opt-in**: nothing is created unless you set it.
 
 Servers default to **Ubuntu 24.04 LTS**. The portable sizes `small`, `medium` and
 `large` map to a sensible machine type on each cloud, and any native type such as
@@ -28,6 +37,14 @@ Servers default to **Ubuntu 24.04 LTS**. The portable sizes `small`, `medium` an
 | `small` | t3.small | Standard_B2s | e2-small |
 | `medium` | t3.large | Standard_D2s_v5 | e2-standard-2 |
 | `large` | m6i.xlarge | Standard_D4s_v5 | n2-standard-4 |
+
+The same `small`/`medium`/`large` names work for every other service:
+
+| size | Kubernetes nodes (AWS / Azure / GCP) | Databases (AWS / Azure PG / GCP) | Containers (vCPU / memory) |
+|---|---|---|---|
+| `small` | t3.medium / D2s_v5 / e2-standard-2 | db.t4g.small / B1ms / 1 vCPU 3.75 GB | 0.5 / 1 GB |
+| `medium` | m6i.large / D4s_v5 / e2-standard-4 | db.m7g.large / D2ds_v5 / 2 vCPU 7.5 GB | 1 / 2 GB |
+| `large` | m6i.xlarge / D8s_v5 / e2-standard-8 | db.m7g.xlarge / D4ds_v5 / 4 vCPU 15 GB | 2 / 4 GB |
 
 ## Choosing an entry point
 
@@ -69,7 +86,7 @@ module "foundation" {
   ]
 
   servers = {
-    web = { subnet = "public", size = "medium", public_ip = true, user_data = file("cloud-init.yaml") }
+    web = { subnet = "public-a", size = "medium", public_ip = true, user_data = file("cloud-init.yaml") }
     api = { size = "large", disk_size_gb = 100 } # private subnet, egress via NAT
   }
 }
@@ -86,6 +103,38 @@ module "foundation" {
   environment = "dev"
   region      = "europe-west1"
   project_id  = "acme-dev-123"
+}
+```
+
+### Full platform
+
+Every service uses the same inputs on every cloud. See
+[examples/platform](examples/platform) for a runnable version.
+
+```hcl
+module "platform" {
+  source  = "<namespace>/foundation/multicloud//modules/azure"   # or aws / gcp
+  version = "~> 0.1"
+
+  name   = "acme"
+  region = "westeurope"
+
+  kubernetes = { enabled = true, node_size = "medium", node_min = 2, node_max = 6 }
+
+  databases = {
+    app = { engine = "postgres", size = "medium", high_availability = true }
+  }
+
+  containers = {
+    web = { image = "nginx:1.27", min_replicas = 2, max_replicas = 10 }
+  }
+
+  functions = {
+    hello = { source_dir = "./functions/hello", runtime = "python3.12", public = true }
+  }
+
+  security   = { customer_managed_keys = true }
+  monitoring = { alert_emails = ["ops@example.com"] }
 }
 ```
 
@@ -126,14 +175,21 @@ Create each workspace once with `terraform workspace new <env>` before the pipel
 | `environment` | `string` | `null` | `dev`, `prod`, and so on. When null, `terraform.workspace` is used (after sanitising). |
 | `region` | `string` | required | AWS region, Azure location or GCP region. |
 | `network_cidr` | `string` | `"10.0.0.0/16"` | IPv4 CIDR for the VPC or VNet. |
-| `subnets` | `map(object({ cidr = string, public = optional(bool, false) }))` | `null` | When null, a public `/24` (`.0`) and a private `/24` (`.10`) are derived from `network_cidr`. |
+| `subnets` | `map(object({ cidr = string, public = optional(bool, false) }))` | `null` | When null, `public-a` (`.0`), `public-b` (`.1`), `private-a` (`.10`) and `private-b` (`.11`) `/24`s are derived from `network_cidr`. Two of each tier gives AWS the two availability zones that EKS, RDS and load balancers need. |
 | `create_storage_bucket` | `bool` | `true` | Create the bucket or storage account. |
 | `tags` | `map(string)` | `{}` | Merged over `managed-by`, `environment` and `workload`. Converted to valid labels on GCP. |
 | `enable_nat_gateway` | `bool` | `true` | Give private subnets outbound internet access through NAT with a static IP. |
 | `ingress_rules` | `list(object({ name, protocol = "tcp", from_port, to_port = null, source_cidrs }))` | `[]` | Inbound rules for servers. `protocol` is `tcp` or `udp`. Traffic inside the network is always allowed. |
-| `servers` | `map(object({ subnet = "private", size = "small", image = null, disk_size_gb = 30, public_ip = false, user_data = null }))` | `{}` | VMs keyed by name. `user_data` is cloud-init on every cloud. `image`: AMI ID on AWS, `publisher:offer:sku:version` on Azure, image path or family on GCP. |
+| `servers` | `map(object({ subnet = first private, size = "small", image = null, disk_size_gb = 30, public_ip = false, user_data = null }))` | `{}` | VMs keyed by name. `user_data` is cloud-init on every cloud. `image`: AMI ID on AWS, `publisher:offer:sku:version` on Azure, image path or family on GCP. |
 | `admin_username` | `string` | `"cloudadmin"` | Admin user on servers. Reserved names like `admin` and `root` are rejected. |
 | `ssh_public_key` | `string` | `null` | OpenSSH public key for `admin_username`. **Required for servers on Azure.** On AWS you can leave it unset and connect through SSM Session Manager. |
+| `kubernetes` | `object({ enabled = false, version = null, subnets = private subnets, node_size = "medium", node_min = 1, node_max = 3, node_disk_gb = 50, public_endpoint = true, authorized_cidrs = ["0.0.0.0/0"], pod_cidr = "100.64.0.0/16", service_cidr = "172.20.0.0/16" })` | `{}` | Managed Kubernetes cluster with one autoscaling node pool. `pod_cidr` and `service_cidr` must not overlap `network_cidr`. |
+| `databases` | `map(object({ engine = "postgres", version = 16 / 8.0, size = "small", storage_gb = 32, high_availability = false, backup_retention_days = 7 }))` | `{}` | PostgreSQL or MySQL, private networking only, with an admin password generated and stored in the cloud's secret store. |
+| `containers` | `map(object({ image, port = 80, size = "small", min_replicas = 1, max_replicas = 3, public = true, env = {} }))` | `{}` | HTTP container services. `public = false` keeps them reachable only from inside the network. |
+| `functions` | `map(object({ source_dir, runtime = "python3.12", entry_point = "handler", memory_mb = 512, timeout_seconds = 60, public = false, env = {} }))` | `{}` | Runtimes: `python3.11`, `python3.12`, `nodejs20`, `nodejs22`. AWS and GCP call `main.py` / `index.js` → `entry_point`; Azure uses its own programming model (`function_app.py`). |
+| `security` | `object({ customer_managed_keys = false, flow_logs = true })` | `{}` | Customer-managed encryption keys and network flow logs (AWS and GCP). |
+| `monitoring` | `object({ alert_emails = [], log_retention_days = 30, cpu_alert_threshold = 80 })` | `{}` | CPU, health and error alerts for every service, sent to these addresses. Retention: 30, 60, 90, 180 or 365. |
+| `deletion_protection` | `bool` | `true` | Blocks deletion of databases, clusters, load balancers and Cloud Run services. Set `false` for throwaway environments. |
 
 ### Cloud-specific
 
@@ -160,10 +216,18 @@ and `gcp = { project_id, storage_class }`.
 | `storage_bucket_url` | `s3://`, `gs://` or `https://<account>.blob.core.windows.net/data`. |
 | `servers` | Map of server key to `{ id, private_ip, public_ip }`. `public_ip` is null for private servers. |
 | `nat_public_ip` | Static egress IP of the NAT, for allowlisting. Null when NAT is disabled. |
+| `kubernetes` | `{ name, id, endpoint, version, kubeconfig_command }`, or null. Run `kubeconfig_command` to use `kubectl`. |
+| `databases` | Map of key to `{ engine, endpoint, port, database, username, credentials_secret }`. The secret is an ARN, Key Vault secret ID or Secret Manager ID. |
+| `containers` | Map of key to `{ url }`. `url` is null for private services. |
+| `functions` | Map of key to `{ name, url }`. |
+| `kms_key_id` | Customer-managed key (AWS and GCP). Null on Azure or when disabled. |
 | `environment`, `name_prefix`, `region`, `tags` | The values the module resolved and applied. |
 | `security_group_id` (aws) | Security group attached to servers. |
 | `network_security_group_id` (azure) | NSG attached to every subnet. |
 | `resource_group_name` (azure) / `azure_resource_group_name` (root) | The Azure resource group used. |
+| `key_vault_id`, `log_analytics_workspace_id` (azure) | Key Vault for generated secrets and the central log workspace. |
+| `alert_topic` (aws) | SNS topic that receives alerts. |
+| `cloud` (root only) | The cloud that was selected. |
 
 ## Operational notes
 
@@ -177,12 +241,29 @@ and `gcp = { project_id, storage_class }`.
   but zone-redundant only on GCP, where Cloud NAT is regional.
 - **GCP IAM.** The deploying identity needs permission to create service accounts and
   grant project IAM roles, because each server gets a log and metric writer service account.
-| `cloud` (root only) | The cloud that was selected. |
+- **Permissions to deploy.** On Azure, the identity running Terraform needs
+  *Owner* (or *Contributor* + *User Access Administrator*): the module grants AKS
+  network access and gives you Key Vault and cluster-admin roles. On GCP, enable the
+  `container`, `sqladmin`, `servicenetworking`, `run`, `cloudfunctions`,
+  `cloudbuild`, `artifactregistry`, `secretmanager`, `cloudkms` and `monitoring`
+  APIs for the services you use.
+- **Alert emails.** AWS and Azure send a confirmation email to each address. Alerts
+  only arrive after it's confirmed.
+- **Azure security settings.** Azure data uses Microsoft-managed keys, and
+  `security.customer_managed_keys` and `security.flow_logs` have no effect there yet.
+- **Azure functions.** Flex Consumption apps are always reachable over HTTPS and are
+  protected by function keys; `public = false` doesn't make them private.
+- **GCP key rings are permanent.** Cloud KMS key rings can't be deleted, so with
+  `customer_managed_keys = true` you can't destroy and recreate the same `name` and
+  `environment` in the same project.
+- **Container HTTPS on AWS.** Public containers get an ALB on HTTP port 80. Put
+  CloudFront in front, or add an ACM certificate listener, for HTTPS. Azure and GCP
+  serve HTTPS by default.
 
 ## Requirements
 
 - Terraform `>= 1.9`
-- Providers: `hashicorp/aws >= 6.0`, `hashicorp/azurerm >= 4.20`, `hashicorp/google >= 6.0`, `hashicorp/random >= 3.5`
+- Providers: `hashicorp/aws ~> 6`, `hashicorp/azurerm ~> 5`, `hashicorp/google ~> 8`, `hashicorp/random ~> 3`, `hashicorp/archive ~> 2`, `hashicorp/time` (Azure)
 
 ## Development
 

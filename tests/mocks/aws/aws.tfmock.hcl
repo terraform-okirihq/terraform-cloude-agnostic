@@ -34,3 +34,67 @@ mock_resource "aws_instance" {
     public_ip  = "203.0.113.20"
   }
 }
+
+# AWS validates ARN formats, so resources referenced by ARN need real-looking ones.
+mock_resource "aws_cloudwatch_log_group" {
+  defaults = { arn = "arn:aws:logs:us-east-1:123456789012:log-group:mock" }
+}
+
+mock_resource "aws_iam_role" {
+  defaults = { arn = "arn:aws:iam::123456789012:role/mock" }
+}
+
+mock_resource "aws_kms_key" {
+  defaults = { arn = "arn:aws:kms:us-east-1:123456789012:key/00000000-0000-0000-0000-000000000000" }
+}
+
+mock_resource "aws_sns_topic" {
+  defaults = { arn = "arn:aws:sns:us-east-1:123456789012:mock" }
+}
+
+mock_resource "aws_lb" {
+  defaults = {
+    arn      = "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/mock/0123456789abcdef"
+    dns_name = "mock-123.us-east-1.elb.amazonaws.com"
+  }
+}
+
+mock_resource "aws_lb_target_group" {
+  defaults = { arn = "arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/mock/0123456789abcdef" }
+}
+
+mock_resource "aws_ecs_cluster" {
+  defaults = {
+    arn = "arn:aws:ecs:us-east-1:123456789012:cluster/mock"
+    id  = "arn:aws:ecs:us-east-1:123456789012:cluster/mock"
+  }
+}
+
+mock_resource "aws_ecs_task_definition" {
+  defaults = { arn = "arn:aws:ecs:us-east-1:123456789012:task-definition/mock:1" }
+}
+
+mock_resource "aws_eks_cluster" {
+  defaults = {
+    arn      = "arn:aws:eks:us-east-1:123456789012:cluster/mock"
+    endpoint = "https://MOCK.gr7.us-east-1.eks.amazonaws.com"
+    version  = "1.34"
+  }
+}
+
+mock_resource "aws_lambda_function" {
+  defaults = { arn = "arn:aws:lambda:us-east-1:123456789012:function:mock" }
+}
+
+mock_resource "aws_lambda_function_url" {
+  defaults = { function_url = "https://mock.lambda-url.us-east-1.on.aws/" }
+}
+
+mock_resource "aws_db_instance" {
+  defaults = {
+    address = "mock.abc123.us-east-1.rds.amazonaws.com"
+    master_user_secret = [{
+      secret_arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:rds-mock"
+    }]
+  }
+}
