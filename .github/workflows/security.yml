@@ -1,0 +1,95 @@
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: secret-scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # scan full history
+      - name: Scan git history for secrets
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.21.2 \
+            detect --source /repo --redact --verbose --exit-code 1
+
+  malware:
+    name: malware-scan (clamav)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ClamAV and update signatures
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clamav clamav-freshclam
+          sudo systemctl stop clamav-freshclam || true
+          sudo freshclam --quiet
+      - name: Scan repository
+        run: clamscan --recursive --infected --exclude-dir='^\./\.git$' .
+
+  trivy:
+    name: code-scan (trivy)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          format: sarif
+          output: trivy.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          exit-code: "0" # report to the Security tab; set "1" to block merges
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always() && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
+
+  checkov:
+    name: code-scan (checkov)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          output_format: sarif
+          output_file_path: results
+          soft_fail: true # report to the Security tab; set false to block merges
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always() && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
+        with:
+          sarif_file: results/results.sarif
+          category: checkov
+
+  dependency-review:
+    name: dependency-review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

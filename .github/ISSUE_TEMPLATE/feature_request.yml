@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest a new capability for the module
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do that the module doesn't support?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed interface
+      description: How would the input/output look? It should work the same on AWS, Azure and GCP.
+      render: hcl
+  - type: checkboxes
+    id: clouds
+    attributes:
+      label: Clouds
+      options:
+        - label: AWS
+        - label: Azure
+        - label: GCP

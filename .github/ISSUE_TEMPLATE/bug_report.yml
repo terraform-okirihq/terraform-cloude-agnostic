@@ -1,0 +1,48 @@
+name: Bug report
+description: Something in the module doesn't work as documented
+labels: ["bug", "triage"]
+body:
+  - type: dropdown
+    id: cloud
+    attributes:
+      label: Cloud
+      multiple: true
+      options: [AWS, Azure, GCP, Root switch module]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Module version
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: Terraform and provider versions
+      description: Output of `terraform version`
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Module configuration
+      description: Minimal module block that reproduces the problem. Remove secrets.
+      render: hcl
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened?
+      description: Include the error output from plan/apply.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
