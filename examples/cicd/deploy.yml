@@ -1,0 +1,45 @@
+name: terraform-deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write # OIDC to the cloud provider
+  pull-requests: write
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1 # dev -> staging -> prod
+      matrix:
+        environment: [dev, staging, prod]
+    environment: ${{ github.event_name == 'push' && matrix.environment || '' }}
+    env:
+      TF_WORKSPACE: ${{ matrix.environment }}
+      TF_VAR_environment: ${{ matrix.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - run: terraform fmt -check -recursive
+      - run: terraform init
+      - run: terraform validate
+      - run: terraform plan -var-file=env/${{ matrix.environment }}.tfvars -out=tfplan
+
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: terraform apply tfplan
