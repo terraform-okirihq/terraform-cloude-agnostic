@@ -50,14 +50,14 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
-      - uses: aquasecurity/trivy-action@0.28.0
+      - uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
           format: sarif
           output: trivy.sarif
           severity: CRITICAL,HIGH,MEDIUM
           exit-code: "0" # report to the Security tab; set "1" to block merges
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@v4
         if: always() && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
         with:
           sarif_file: trivy.sarif
@@ -78,10 +78,10 @@ jobs:
           output_format: sarif
           output_file_path: results
           soft_fail: true # report to the Security tab; set false to block merges
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@v4
         if: always() && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
         with:
-          sarif_file: results/results.sarif
+          sarif_file: results # directory: checkov picks the file name
           category: checkov
 
   dependency-review:
