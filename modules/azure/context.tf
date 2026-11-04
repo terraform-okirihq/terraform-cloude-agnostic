@@ -15,6 +15,7 @@ module "context" {
   databases           = var.databases
   containers          = var.containers
   functions           = var.functions
+  security            = var.security # accepted for interface parity; not used on Azure yet
   monitoring          = var.monitoring
   deletion_protection = var.deletion_protection
 }
