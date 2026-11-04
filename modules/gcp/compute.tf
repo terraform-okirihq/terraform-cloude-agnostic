@@ -72,7 +72,7 @@ resource "google_compute_instance" "server" {
   # grant roles/compute.osAdminLogin instead.
   metadata = merge(
     { "block-project-ssh-keys" = "true" },
-    var.ssh_public_key != null ? { "ssh-keys" = "${var.admin_username}:${var.ssh_public_key}" } : {},
+    module.context.ssh_public_key != null ? { "ssh-keys" = "${var.admin_username}:${module.context.ssh_public_key}" } : {},
     each.value.user_data != null ? { "user-data" = each.value.user_data } : {},
   )
 

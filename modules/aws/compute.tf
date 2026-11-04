@@ -32,11 +32,11 @@ data "aws_ami" "ubuntu" {
 }
 
 resource "aws_key_pair" "this" {
-  count = local.create_servers && var.ssh_public_key != null ? 1 : 0
+  count = local.create_servers && module.context.ssh_public_key != null ? 1 : 0
 
   region     = var.region
   key_name   = local.name_prefix
-  public_key = var.ssh_public_key
+  public_key = module.context.ssh_public_key
   tags       = local.tags
 }
 
