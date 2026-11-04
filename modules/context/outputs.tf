@@ -48,3 +48,8 @@ output "admin_username" {
   description = "Admin username for servers."
   value       = var.admin_username
 }
+
+output "ssh_public_key" {
+  description = "Validated SSH public key (or null)."
+  value       = var.ssh_public_key
+}

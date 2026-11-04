@@ -19,6 +19,5 @@ locals {
   ingress_rules = module.context.ingress_rules
   servers       = module.context.servers
 
-  public_subnets  = { for k, s in local.subnets : k => s if s.public }
   private_subnets = { for k, s in local.subnets : k => s if !s.public }
 }
