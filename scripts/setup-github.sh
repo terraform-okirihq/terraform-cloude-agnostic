@@ -34,6 +34,11 @@ gh api -X PUT "repos/${repo}/vulnerability-alerts" >/dev/null
 gh api -X PUT "repos/${repo}/automated-security-fixes" >/dev/null
 gh api -X PUT "repos/${repo}/private-vulnerability-reporting" >/dev/null
 
+echo "==> Actions: read-only default token, allow release-please to open PRs"
+gh api -X PUT "repos/${repo}/actions/permissions/workflow" \
+  -f default_workflow_permissions=read \
+  -F can_approve_pull_request_reviews=true >/dev/null
+
 echo "==> Branch protection ruleset for the default branch"
 existing=$(gh api "repos/${repo}/rulesets" --jq '.[] | select(.name=="protect-main") | .id')
 if [[ -n "${existing}" ]]; then
