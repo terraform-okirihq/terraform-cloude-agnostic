@@ -59,7 +59,7 @@ resource "azurerm_linux_virtual_machine" "server" {
 
   admin_ssh_key {
     username   = var.admin_username
-    public_key = var.ssh_public_key
+    public_key = module.context.ssh_public_key
   }
 
   os_disk {
@@ -86,7 +86,7 @@ resource "azurerm_linux_virtual_machine" "server" {
 
   lifecycle {
     precondition {
-      condition     = var.ssh_public_key != null
+      condition     = module.context.ssh_public_key != null
       error_message = "Azure Linux VMs require ssh_public_key (password login is disabled)."
     }
     precondition {

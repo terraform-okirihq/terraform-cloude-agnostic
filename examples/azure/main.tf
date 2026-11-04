@@ -14,9 +14,9 @@ provider "azurerm" {
   features {}
 }
 
-variable "ssh_public_key_path" {
-  type    = string
-  default = "~/.ssh/id_rsa.pub"
+# e.g. terraform apply -var "ssh_public_key=$(cat ~/.ssh/id_rsa.pub)"
+variable "ssh_public_key" {
+  type = string
 }
 
 variable "environment" {
@@ -34,7 +34,7 @@ module "foundation" {
   network_cidr = "10.20.0.0/16"
   tags         = { owner = "platform-team" }
 
-  ssh_public_key = file(pathexpand(var.ssh_public_key_path))
+  ssh_public_key = var.ssh_public_key
   ingress_rules = [
     { name = "ssh", from_port = 22, source_cidrs = ["203.0.113.0/24"] }, # your office/VPN range
   ]
