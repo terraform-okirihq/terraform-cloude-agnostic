@@ -203,7 +203,7 @@ run "platform_services" {
     error_message = "Alert topic and log groups must use the CMK (aws/sns blocks CloudWatch alarms)."
   }
   assert {
-    condition     = length(aws_wafv2_web_acl_association.containers) == 1 && length(aws_wafv2_web_acl.containers[0].rule) == 3
+    condition     = length(aws_wafv2_web_acl_association.containers) == 1 && length(aws_wafv2_web_acl.containers[0].rule) == 3 && contains([for r in aws_wafv2_web_acl.containers[0].rule : r.name], "AWSManagedRulesKnownBadInputsRuleSet")
     error_message = "Public load balancers must be protected by WAF managed rules."
   }
   assert {

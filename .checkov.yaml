@@ -15,6 +15,8 @@ skip-check:
   - CKV_AWS_115       # Lambda reserved concurrency: reserving it can fail on accounts with low limits
   - CKV_AWS_116       # Lambda DLQ: functions are invoked synchronously over HTTP; a DLQ only applies to async invokes
   - CKV_AWS_272       # Lambda code signing: needs a signing profile owned by the user
+  - CKV2_AWS_76       # WAF Log4j rules: AWSManagedRulesKnownBadInputsRuleSet is attached; the check cannot follow
+                      # the for_each association (asserted in tests/aws.tftest.hcl)
   # --- Azure -------------------------------------------------------------
   - CKV2_AZURE_1      # Storage CMK: Azure uses Microsoft-managed keys in this module (documented)
   - CKV2_AZURE_33     # Storage private endpoint: Terraform must reach the data plane to create containers
@@ -27,6 +29,7 @@ skip-check:
   - CKV_AZURE_109     # Key Vault firewall: same reason; access is RBAC-only
   - CKV_AZURE_189     # Key Vault public network access: same reason
   - CKV_AZURE_41      # Secret expiry: generated database passwords do not expire on a schedule
+  - CKV2_AZURE_41     # SAS expiration policy: sas_policy is set (1 day) but not recognised by the check
   - CKV_AZURE_115     # AKS private cluster: controlled by kubernetes.public_endpoint
   - CKV_AZURE_117     # AKS disk encryption set: Azure CMK not implemented in this module (documented)
   - CKV_AZURE_226     # AKS ephemeral OS disk: default node sizes have no local temp disk

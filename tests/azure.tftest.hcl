@@ -171,7 +171,7 @@ run "platform_services" {
 
   # Storage hardening
   assert {
-    condition     = azurerm_storage_account.functions[0].infrastructure_encryption_enabled && azurerm_storage_account.functions[0].blob_properties[0].delete_retention_policy[0].days == 7
+    condition     = azurerm_storage_account.functions[0].infrastructure_encryption_enabled && azurerm_storage_account.functions[0].blob_properties[0].delete_retention_policy[0].days == 7 && azurerm_storage_account.functions[0].sas_policy[0].expiration_period == "1.00:00:00"
     error_message = "Storage accounts need infrastructure encryption and soft delete."
   }
 

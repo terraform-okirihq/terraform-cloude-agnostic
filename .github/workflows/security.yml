@@ -85,13 +85,14 @@ jobs:
       - name: Drop suppressed results
         if: always()
         run: |
+          mkdir -p checkov-sarif
           for f in results/*.sarif; do
-            jq '(.runs[].results) |= map(select((.suppressions // []) | length == 0))' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+            jq '(.runs[].results) |= map(select((.suppressions // []) | length == 0))' "$f" > "checkov-sarif/$(basename "$f")"
           done
       - uses: github/codeql-action/upload-sarif@v4
         if: always() && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
         with:
-          sarif_file: results # directory: checkov picks the file name
+          sarif_file: checkov-sarif
           category: checkov
 
   dependency-review:
