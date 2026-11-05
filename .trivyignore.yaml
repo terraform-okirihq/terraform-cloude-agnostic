@@ -1,0 +1,35 @@
+# Trivy accepted findings. Each entry is a deliberate design decision.
+# See SECURITY.md.
+misconfigurations:
+  - id: AWS-0104
+    statement: Egress to the internet (via NAT) is required for updates, image pulls and APIs
+  - id: AWS-0053
+    paths: ["modules/aws/containers.tf"]
+    statement: Load balancers are only created for containers with public = true
+  - id: AWS-0054
+    paths: ["modules/aws/containers.tf"]
+    statement: HTTP is served only when no certificate_arn is set; with one it redirects to HTTPS
+  - id: AWS-0040
+    statement: EKS public endpoint is controlled by kubernetes.public_endpoint
+  - id: AWS-0041
+    statement: EKS endpoint CIDRs are controlled by kubernetes.authorized_cidrs
+  - id: AWS-0089
+    statement: S3 server access logs are not required; use CloudTrail data events
+  - id: AZU-0012
+    statement: Terraform must reach the storage data plane; anonymous access is disabled
+  - id: AZU-0057
+    statement: Blob logs go to Log Analytics via diagnostic settings; no queues are used
+  - id: AZU-0058
+    statement: Replication is controlled by azure.storage_replication_type
+  - id: AZU-0060
+    statement: Azure uses Microsoft-managed keys in this module (documented)
+  - id: AZU-0068
+    statement: VMs are attached to the network through their NIC (false positive)
+  - id: GCP-0072
+    paths: ["modules/gcp/security.tf"]
+    statement: Allow-all applies only to traffic between the module's own subnets
+  - id: GCP-0074
+    paths: ["modules/gcp/security.tf"]
+    statement: Wide port ranges apply only to traffic between the module's own subnets
+  - id: GCP-0077
+    statement: Use Cloud Audit Logs data-access logs instead of legacy bucket access logs

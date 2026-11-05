@@ -169,6 +169,12 @@ run "platform_services" {
     error_message = "Function runtime or memory rounding wrong."
   }
 
+  # Storage hardening
+  assert {
+    condition     = azurerm_storage_account.functions[0].infrastructure_encryption_enabled && azurerm_storage_account.functions[0].blob_properties[0].delete_retention_policy[0].days == 7
+    error_message = "Storage accounts need infrastructure encryption and soft delete."
+  }
+
   # Monitoring
   assert {
     condition     = length(azurerm_monitor_action_group.alerts[0].email_receiver) == 2 && length(azurerm_monitor_metric_alert.database_cpu) == 2 && length(azurerm_monitor_metric_alert.kubernetes_cpu) == 1

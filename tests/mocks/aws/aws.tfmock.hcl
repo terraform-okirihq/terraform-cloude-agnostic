@@ -98,3 +98,19 @@ mock_resource "aws_db_instance" {
     }]
   }
 }
+
+mock_data "aws_caller_identity" {
+  defaults = { account_id = "123456789012" }
+}
+
+mock_data "aws_elb_service_account" {
+  defaults = { arn = "arn:aws:iam::127311923021:root" }
+}
+
+mock_resource "aws_s3_bucket" {
+  defaults = { arn = "arn:aws:s3:::mock-bucket" }
+}
+
+mock_resource "aws_wafv2_web_acl" {
+  defaults = { arn = "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/mock/00000000-0000-0000-0000-000000000000" }
+}

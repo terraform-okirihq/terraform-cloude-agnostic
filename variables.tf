@@ -185,7 +185,7 @@ variable "functions" {
 variable "security" {
   description = "Security settings: { customer_managed_keys, flow_logs }."
   type = object({
-    customer_managed_keys = optional(bool, false)
+    customer_managed_keys = optional(bool, true)
     flow_logs             = optional(bool, true)
   })
   default = {}
@@ -215,6 +215,8 @@ variable "aws" {
   description = "AWS-only settings."
   type = object({
     availability_zones = optional(list(string))
+    certificate_arn    = optional(string)
+    enable_waf         = optional(bool, true)
   })
   default = {}
 }

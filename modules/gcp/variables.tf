@@ -151,7 +151,7 @@ variable "functions" {
 variable "security" {
   description = "Security settings: { customer_managed_keys, flow_logs }."
   type = object({
-    customer_managed_keys = optional(bool, false)
+    customer_managed_keys = optional(bool, true)
     flow_logs             = optional(bool, true)
   })
   default = {}

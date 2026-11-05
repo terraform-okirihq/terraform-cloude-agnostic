@@ -26,7 +26,7 @@ resource "google_compute_subnetwork" "this" {
   region                   = var.region
   network                  = google_compute_network.this.id
   ip_cidr_range            = each.value.cidr
-  private_ip_google_access = !each.value.public
+  private_ip_google_access = true
 
   # Secondary ranges for GKE pods and services (VPC-native cluster).
   dynamic "secondary_ip_range" {

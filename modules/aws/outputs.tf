@@ -101,7 +101,7 @@ output "containers" {
   description = "Map of container key => { url } (url is null for private services)."
   value = {
     for k, c in local.containers : k => {
-      url = c.public ? "http://${aws_lb.containers[k].dns_name}" : null
+      url = c.public ? "${local.alb_https ? "https" : "http"}://${aws_lb.containers[k].dns_name}" : null
     }
   }
 }

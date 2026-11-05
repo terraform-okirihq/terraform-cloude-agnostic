@@ -110,6 +110,27 @@ resource "aws_s3_bucket_versioning" "this" {
   }
 }
 
+resource "aws_s3_bucket_lifecycle_configuration" "this" {
+  count = var.create_storage_bucket ? 1 : 0
+
+  region = var.region
+  bucket = aws_s3_bucket.this[0].id
+
+  rule {
+    id     = "housekeeping"
+    status = "Enabled"
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 90
+    }
+  }
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
   count = var.create_storage_bucket ? 1 : 0
 

@@ -29,6 +29,20 @@ resource "google_storage_bucket" "functions" {
   public_access_prevention    = "enforced"
   force_destroy               = true # holds only build artifacts
   labels                      = local.labels
+
+  versioning {
+    enabled = true
+  }
+
+  lifecycle_rule {
+    condition {
+      num_newer_versions = 3
+      with_state         = "ARCHIVED"
+    }
+    action {
+      type = "Delete"
+    }
+  }
 }
 
 resource "google_storage_bucket_object" "functions" {

@@ -129,6 +129,10 @@ run "platform_services" {
 
   # Databases
   assert {
+    condition     = length([for f in google_sql_database_instance.this["app"].settings[0].database_flags : f if f.name == "cloudsql.enable_pgaudit" && f.value == "on"]) == 1 && length(google_sql_database_instance.this["analytics"].settings[0].database_flags) == 0
+    error_message = "PostgreSQL must get audit/log flags; MySQL must not get PostgreSQL flags."
+  }
+  assert {
     condition     = google_sql_database_instance.this["app"].database_version == "POSTGRES_16" && google_sql_database_instance.this["analytics"].database_version == "MYSQL_8_0"
     error_message = "Database versions not mapped."
   }

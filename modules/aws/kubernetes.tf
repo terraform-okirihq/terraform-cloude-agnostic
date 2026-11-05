@@ -63,6 +63,7 @@ resource "aws_cloudwatch_log_group" "eks" {
   region            = var.region
   name              = "/aws/eks/${local.name_prefix}/cluster"
   retention_in_days = local.monitoring.log_retention_days
+  kms_key_id        = local.kms_key_arn
   tags              = local.tags
 }
 

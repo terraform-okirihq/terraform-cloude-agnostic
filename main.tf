@@ -27,6 +27,8 @@ module "aws" {
 
   storage_force_destroy = var.storage_force_destroy
   availability_zones    = var.aws.availability_zones
+  certificate_arn       = var.aws.certificate_arn
+  enable_waf            = var.aws.enable_waf
 }
 
 module "azure" {

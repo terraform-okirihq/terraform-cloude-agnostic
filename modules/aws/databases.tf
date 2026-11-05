@@ -18,6 +18,31 @@ locals {
   }
 }
 
+data "aws_iam_policy_document" "rds_monitoring_assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["monitoring.rds.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "rds_monitoring" {
+  count = local.create_databases ? 1 : 0
+
+  name               = "${local.name_prefix}-${var.region}-rds-monitoring"
+  assume_role_policy = data.aws_iam_policy_document.rds_monitoring_assume.json
+  tags               = local.tags
+}
+
+resource "aws_iam_role_policy_attachment" "rds_monitoring" {
+  count = local.create_databases ? 1 : 0
+
+  role       = aws_iam_role.rds_monitoring[0].name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+}
+
 resource "aws_db_subnet_group" "this" {
   count = local.create_databases ? 1 : 0
 
@@ -76,8 +101,16 @@ resource "aws_db_instance" "this" {
   copy_tags_to_snapshot               = true
   auto_minor_version_upgrade          = true
   enabled_cloudwatch_logs_exports     = local.db_log_exports[each.value.engine]
-  deletion_protection                 = local.deletion_protection
-  skip_final_snapshot                 = !local.deletion_protection
-  final_snapshot_identifier           = local.deletion_protection ? "${local.name_prefix}-${each.key}-final" : null
-  tags                                = local.tags
+  monitoring_interval                 = 60
+  monitoring_role_arn                 = aws_iam_role.rds_monitoring[0].arn
+  # Not available for MySQL on burstable small instances.
+  performance_insights_enabled          = !(each.value.engine == "mysql" && each.value.size == "small")
+  performance_insights_kms_key_id       = !(each.value.engine == "mysql" && each.value.size == "small") ? local.kms_key_arn : null
+  performance_insights_retention_period = !(each.value.engine == "mysql" && each.value.size == "small") ? 7 : null
+  deletion_protection                   = local.deletion_protection
+  skip_final_snapshot                   = !local.deletion_protection
+  final_snapshot_identifier             = local.deletion_protection ? "${local.name_prefix}-${each.key}-final" : null
+  tags                                  = local.tags
+
+  depends_on = [aws_iam_role_policy_attachment.rds_monitoring]
 }

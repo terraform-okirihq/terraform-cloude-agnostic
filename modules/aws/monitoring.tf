@@ -4,9 +4,11 @@
 resource "aws_sns_topic" "alerts" {
   count = length(local.monitoring.alert_emails) > 0 ? 1 : 0
 
-  region            = var.region
-  name              = "${local.name_prefix}-alerts"
-  kms_master_key_id = "alias/aws/sns"
+  region = var.region
+  name   = "${local.name_prefix}-alerts"
+  # The AWS-managed aws/sns key does not allow CloudWatch alarms to publish,
+  # so the topic uses the customer-managed key (or SSE is off without one).
+  kms_master_key_id = local.kms_key_arn
   tags              = local.tags
 }
 

@@ -47,17 +47,29 @@ resource "random_id" "storage" {
 resource "azurerm_storage_account" "this" {
   count = var.create_storage_bucket ? 1 : 0
 
-  name                            = "${local.storage_prefix}${random_id.storage[0].hex}"
-  resource_group_name             = local.resource_group_name
-  location                        = var.region
-  account_tier                    = "Standard"
-  account_replication_type        = var.storage_replication_type
-  min_tls_version                 = "TLS1_2"
-  https_traffic_only_enabled      = true
-  allow_nested_items_to_be_public = false
+  name                              = "${local.storage_prefix}${random_id.storage[0].hex}"
+  resource_group_name               = local.resource_group_name
+  location                          = var.region
+  account_tier                      = "Standard"
+  account_replication_type          = var.storage_replication_type
+  min_tls_version                   = "TLS1_2"
+  https_traffic_only_enabled        = true
+  allow_nested_items_to_be_public   = false
+  infrastructure_encryption_enabled = true
+
+  sas_policy {
+    expiration_period = "01.00:00:00"
+    expiration_action = "Log"
+  }
 
   blob_properties {
     versioning_enabled = true
+    delete_retention_policy {
+      days = 7
+    }
+    container_delete_retention_policy {
+      days = 7
+    }
   }
 
   tags = local.tags
@@ -69,4 +81,22 @@ resource "azurerm_storage_container" "this" {
   name                  = "data"
   storage_account_id    = azurerm_storage_account.this[0].id
   container_access_type = "private"
+}
+
+resource "azurerm_monitor_diagnostic_setting" "storage_blob" {
+  count = var.create_storage_bucket ? 1 : 0
+
+  name                       = "blob-to-log-analytics"
+  target_resource_id         = "${azurerm_storage_account.this[0].id}/blobServices/default"
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.this.id
+
+  enabled_log {
+    category = "StorageRead"
+  }
+  enabled_log {
+    category = "StorageWrite"
+  }
+  enabled_log {
+    category = "StorageDelete"
+  }
 }

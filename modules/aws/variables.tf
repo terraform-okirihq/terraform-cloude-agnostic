@@ -151,7 +151,7 @@ variable "functions" {
 variable "security" {
   description = "Security settings: { customer_managed_keys, flow_logs }."
   type = object({
-    customer_managed_keys = optional(bool, false)
+    customer_managed_keys = optional(bool, true)
     flow_logs             = optional(bool, true)
   })
   default = {}
@@ -181,6 +181,18 @@ variable "storage_force_destroy" {
   description = "Allow destroying a non-empty bucket."
   type        = bool
   default     = false
+}
+
+variable "certificate_arn" {
+  description = "ACM certificate ARN for public container load balancers. When set, they serve HTTPS (TLS 1.2+) and redirect HTTP to HTTPS."
+  type        = string
+  default     = null
+}
+
+variable "enable_waf" {
+  description = "Protect public container load balancers with AWS WAF managed rules (common, known bad inputs, IP reputation)."
+  type        = bool
+  default     = true
 }
 
 variable "availability_zones" {

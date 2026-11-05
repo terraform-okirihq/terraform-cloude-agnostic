@@ -14,14 +14,14 @@ Terraform CLI workspaces, HCP Terraform workspaces and CI/CD pipelines.
 | | AWS | Azure | GCP |
 |---|---|---|---|
 | Network | VPC (DNS on), default security group locked down | Resource group (optional) + VNet | Custom-mode VPC |
-| Subnets | Subnets spread across AZs, IGW + route table for public ones | Subnets, default outbound access only on public ones | Regional subnetworks, Private Google Access on private ones |
+| Subnets | Subnets spread across AZs, IGW + route table for public ones | Subnets, default outbound access only on public ones | Regional subnetworks with Private Google Access |
 | NAT (private egress) | NAT gateway + Elastic IP | NAT gateway + static public IP | Cloud Router + Cloud NAT + reserved IP |
 | Firewall | Security group: VPC-internal + `ingress_rules` | NSG on every subnet: `ingress_rules` | Firewall rules: internal + `ingress_rules` (by network tag) |
 | Servers | EC2 with IMDSv2, encrypted gp3, SSM role, key pair | Linux VM with SSH key only, managed identity, boot diagnostics | Shielded VM, dedicated least-privilege service account |
 | Storage | S3 bucket: versioned, SSE, public access blocked | Storage account (TLS 1.2, no public blobs, versioning) + private `data` container | GCS bucket: versioned, uniform access, public access prevention |
 | **Kubernetes** | EKS (API auth, secrets encryption, control-plane logs) + managed node group | AKS (Entra ID RBAC, Cilium overlay, workload identity, Container Insights) | GKE regional, private nodes, Dataplane V2, workload identity |
-| **Databases** | RDS PostgreSQL/MySQL, encrypted, password in Secrets Manager | Flexible Server via private endpoint, password in Key Vault | Cloud SQL on private IP, TLS only, password in Secret Manager |
-| **Containers** | ECS Fargate + ALB, CPU autoscaling | Container Apps | Cloud Run with Direct VPC egress |
+| **Databases** | RDS PostgreSQL/MySQL, encrypted, Performance Insights, password in Secrets Manager | Flexible Server via private endpoint, password in Key Vault | Cloud SQL on private IP, TLS only, pgAudit, password in Secret Manager |
+| **Containers** | ECS Fargate + ALB (WAF, access logs, HTTPS with your certificate), CPU autoscaling | Container Apps | Cloud Run with Direct VPC egress |
 | **Functions** | Lambda in the VPC + function URL | Function App (Flex Consumption) + Application Insights | Cloud Functions 2nd gen |
 | **Security** | KMS key (rotation), VPC flow logs | Key Vault (RBAC, purge protection) | Cloud KMS (rotation), subnet flow logs |
 | **Monitoring** | CloudWatch alarms → SNS email | Log Analytics + metric alerts → action group email | Cloud Monitoring alert policies → email |
@@ -187,7 +187,7 @@ Create each workspace once with `terraform workspace new <env>` before the pipel
 | `databases` | `map(object({ engine = "postgres", version = 16 / 8.0, size = "small", storage_gb = 32, high_availability = false, backup_retention_days = 7 }))` | `{}` | PostgreSQL or MySQL, private networking only, with an admin password generated and stored in the cloud's secret store. |
 | `containers` | `map(object({ image, port = 80, size = "small", min_replicas = 1, max_replicas = 3, public = true, env = {} }))` | `{}` | HTTP container services. `public = false` keeps them reachable only from inside the network. |
 | `functions` | `map(object({ source_dir, runtime = "python3.12", entry_point = "handler", memory_mb = 512, timeout_seconds = 60, public = false, env = {} }))` | `{}` | Runtimes: `python3.11`, `python3.12`, `nodejs20`, `nodejs22`. AWS and GCP call `main.py` / `index.js` → `entry_point`; Azure uses its own programming model (`function_app.py`). |
-| `security` | `object({ customer_managed_keys = false, flow_logs = true })` | `{}` | Customer-managed encryption keys and network flow logs (AWS and GCP). |
+| `security` | `object({ customer_managed_keys = true, flow_logs = true })` | `{}` | Customer-managed encryption keys (KMS / Cloud KMS) for storage, logs, alerts, databases and Kubernetes secrets, plus network flow logs (AWS and GCP). |
 | `monitoring` | `object({ alert_emails = [], log_retention_days = 30, cpu_alert_threshold = 80 })` | `{}` | CPU, health and error alerts for every service, sent to these addresses. Retention: 30, 60, 90, 180 or 365. |
 | `deletion_protection` | `bool` | `true` | Blocks deletion of databases, clusters, load balancers and Cloud Run services. Set `false` for throwaway environments. |
 
@@ -196,6 +196,8 @@ Create each workspace once with `terraform workspace new <env>` before the pipel
 | Module | Name | Default | Description |
 |---|---|---|---|
 | aws | `availability_zones` | all AZs in the region | AZs that subnets are spread across, round-robin. |
+| aws | `certificate_arn` | `null` | ACM certificate for public container load balancers. When set, they serve HTTPS (TLS 1.2+) and redirect HTTP to HTTPS. |
+| aws | `enable_waf` | `true` | Protect public container load balancers with AWS WAF managed rules. |
 | aws, gcp | `storage_force_destroy` | `false` | Allow destroying a bucket that still holds objects. |
 | azure | `resource_group_name` | `null` | Existing resource group to use. When null, `rg-<name>-<env>` is created. |
 | azure | `storage_replication_type` | `"LRS"` | `LRS`, `ZRS`, `GRS`, `RAGRS`, `GZRS` or `RAGZRS`. |
@@ -203,7 +205,7 @@ Create each workspace once with `terraform workspace new <env>` before the pipel
 | gcp | `storage_class` | `"STANDARD"` | GCS storage class. |
 
 The root module has the shared inputs plus `cloud`, `storage_force_destroy`, and the
-objects `aws = { availability_zones }`, `azure = { resource_group_name, storage_replication_type }`
+objects `aws = { availability_zones, certificate_arn, enable_waf }`, `azure = { resource_group_name, storage_replication_type }`
 and `gcp = { project_id, storage_class }`.
 
 ## Outputs
@@ -253,12 +255,15 @@ and `gcp = { project_id, storage_class }`.
   `security.customer_managed_keys` and `security.flow_logs` have no effect there yet.
 - **Azure functions.** Flex Consumption apps are always reachable over HTTPS and are
   protected by function keys; `public = false` doesn't make them private.
-- **GCP key rings are permanent.** Cloud KMS key rings can't be deleted, so with
-  `customer_managed_keys = true` you can't destroy and recreate the same `name` and
-  `environment` in the same project.
-- **Container HTTPS on AWS.** Public containers get an ALB on HTTP port 80. Put
-  CloudFront in front, or add an ACM certificate listener, for HTTPS. Azure and GCP
-  serve HTTPS by default.
+- **GCP key rings are permanent.** Cloud KMS key rings can't be deleted. The module
+  adds a random suffix to the key ring name, so destroying and recreating an
+  environment works, but old (empty) key rings remain in the project.
+- **Container HTTPS on AWS.** Set `certificate_arn` (an ACM certificate for your
+  domain) to serve HTTPS and redirect HTTP. Without it, public containers are served
+  over HTTP on port 80. Azure and GCP serve HTTPS by default.
+- **Security scanning.** Trivy and Checkov scan every pull request. Findings that are
+  deliberate design decisions are listed with their reasons in `.checkov.yaml` and
+  `.trivyignore.yaml` (see [SECURITY.md](SECURITY.md)).
 
 ## Requirements
 

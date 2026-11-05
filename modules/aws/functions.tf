@@ -53,6 +53,7 @@ resource "aws_cloudwatch_log_group" "functions" {
   region            = var.region
   name              = "/aws/lambda/${local.name_prefix}-${each.key}"
   retention_in_days = local.monitoring.log_retention_days
+  kms_key_id        = local.kms_key_arn
   tags              = local.tags
 }
 
@@ -102,6 +103,7 @@ resource "aws_lambda_function_url" "this" {
 
 # Public URLs need both permissions since AWS's October 2025 change.
 resource "aws_lambda_permission" "public_url" {
+  #checkov:skip=CKV_AWS_301:Only created for functions with public = true
   for_each = { for k, f in local.functions : k => f if f.public }
 
   region                 = var.region
@@ -113,6 +115,7 @@ resource "aws_lambda_permission" "public_url" {
 }
 
 resource "aws_lambda_permission" "public_invoke" {
+  #checkov:skip=CKV_AWS_301:Only created for functions with public = true; limited to calls via the function URL
   for_each = { for k, f in local.functions : k => f if f.public }
 
   region                   = var.region

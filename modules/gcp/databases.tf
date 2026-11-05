@@ -7,6 +7,20 @@ locals {
     large  = "db-custom-4-15360"
   }
   create_databases = length(local.databases) > 0
+
+  # Audit and diagnostic logging for PostgreSQL (CIS GCP 6.2).
+  postgres_flags = {
+    "log_checkpoints"         = "on"
+    "log_connections"         = "on"
+    "log_disconnections"      = "on"
+    "log_lock_waits"          = "on"
+    "log_hostname"            = "on"
+    "log_min_messages"        = "error"
+    "log_min_error_statement" = "error"
+    "log_statement"           = "ddl"
+    "cloudsql.enable_pgaudit" = "on"
+    "pgaudit.log"             = "ddl,role"
+  }
 }
 
 resource "google_compute_global_address" "private_services" {
@@ -78,6 +92,14 @@ resource "google_sql_database_instance" "this" {
 
     insights_config {
       query_insights_enabled = true
+    }
+
+    dynamic "database_flags" {
+      for_each = each.value.engine == "postgres" ? local.postgres_flags : {}
+      content {
+        name  = database_flags.key
+        value = database_flags.value
+      }
     }
 
     maintenance_window {

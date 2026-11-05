@@ -58,8 +58,10 @@ locals {
 resource "google_kms_key_ring" "this" {
   count = local.security.customer_managed_keys ? 1 : 0
 
-  project  = var.project_id
-  name     = "${local.name_prefix}-keyring"
+  project = var.project_id
+  # Key rings can never be deleted; the suffix lets an environment be destroyed
+  # and recreated in the same project.
+  name     = "${local.name_prefix}-keyring-${local.suffix}"
   location = var.region
 }
 

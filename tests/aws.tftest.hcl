@@ -199,6 +199,18 @@ run "platform_services" {
     error_message = "CMK with rotation and VPC flow logs expected."
   }
   assert {
+    condition     = aws_sns_topic.alerts[0].kms_master_key_id == output.kms_key_id && aws_cloudwatch_log_group.containers["web"].kms_key_id == output.kms_key_id
+    error_message = "Alert topic and log groups must use the CMK (aws/sns blocks CloudWatch alarms)."
+  }
+  assert {
+    condition     = length(aws_wafv2_web_acl_association.containers) == 1 && length(aws_wafv2_web_acl.containers[0].rule) == 3
+    error_message = "Public load balancers must be protected by WAF managed rules."
+  }
+  assert {
+    condition     = aws_lb.containers["web"].access_logs[0].enabled && aws_db_instance.this["app"].performance_insights_enabled && aws_db_instance.this["app"].monitoring_interval == 60
+    error_message = "ALB access logs and RDS monitoring expected."
+  }
+  assert {
     condition     = length(aws_sns_topic_subscription.email) == 1 && length(aws_cloudwatch_metric_alarm.database_cpu) == 2 && length(aws_cloudwatch_metric_alarm.function_errors) == 2
     error_message = "Alerts not wired."
   }
@@ -216,4 +228,44 @@ run "eks_needs_two_azs" {
   }
 
   expect_failures = [aws_eks_cluster.this]
+}
+
+run "https_load_balancer" {
+  module {
+    source = "./modules/aws"
+  }
+
+  variables {
+    certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/00000000-0000-0000-0000-000000000000"
+    containers      = { web = { image = "nginx:1.27" } }
+  }
+
+  assert {
+    condition     = aws_lb_listener.containers["web"].default_action[0].type == "redirect" && aws_lb_listener.containers["web"].default_action[0].redirect[0].protocol == "HTTPS"
+    error_message = "Port 80 must redirect to HTTPS when a certificate is set."
+  }
+  assert {
+    condition     = aws_lb_listener.containers_https["web"].ssl_policy == "ELBSecurityPolicy-TLS13-1-2-2021-06"
+    error_message = "HTTPS listener must enforce TLS 1.2+."
+  }
+  assert {
+    condition     = startswith(output.containers["web"].url, "https://")
+    error_message = "Container URL should be HTTPS."
+  }
+}
+
+run "no_cmk_means_no_sns_encryption" {
+  module {
+    source = "./modules/aws"
+  }
+
+  variables {
+    security   = { customer_managed_keys = false }
+    monitoring = { alert_emails = ["ops@example.com"] }
+  }
+
+  assert {
+    condition     = output.kms_key_id == null && aws_sns_topic.alerts[0].kms_master_key_id == null
+    error_message = "Without a CMK the topic must not use aws/sns, which CloudWatch alarms cannot publish to."
+  }
 }

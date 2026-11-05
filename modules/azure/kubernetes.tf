@@ -57,6 +57,7 @@ resource "azurerm_kubernetes_cluster" "this" {
     min_count                   = local.kubernetes.node_min
     max_count                   = local.kubernetes.node_max
     os_disk_size_gb             = local.kubernetes.node_disk_gb
+    max_pods                    = 110
     temporary_name_for_rotation = "systemtmp"
     tags                        = local.tags
 
