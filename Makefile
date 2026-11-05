@@ -22,5 +22,5 @@ test:
 
 security: ## Run the same scanners as CI (requires gitleaks, trivy, checkov installed)
 	gitleaks detect --source . --redact
-	trivy config --severity CRITICAL,HIGH .
-	checkov -d . --framework terraform --quiet
+	trivy config --severity CRITICAL,HIGH,MEDIUM --ignorefile .trivyignore.yaml .
+	checkov -d . --config-file .checkov.yaml --quiet

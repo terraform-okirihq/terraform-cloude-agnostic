@@ -11,6 +11,11 @@ locals {
     name_prefix         = one(concat(module.aws[*].name_prefix, module.azure[*].name_prefix, module.gcp[*].name_prefix))
     servers             = one(concat(module.aws[*].servers, module.azure[*].servers, module.gcp[*].servers))
     nat_public_ip       = one(concat(module.aws[*].nat_public_ip, module.azure[*].nat_public_ip, module.gcp[*].nat_public_ip))
+    kubernetes          = one(concat(module.aws[*].kubernetes, module.azure[*].kubernetes, module.gcp[*].kubernetes))
+    databases           = one(concat(module.aws[*].databases, module.azure[*].databases, module.gcp[*].databases))
+    containers          = one(concat(module.aws[*].containers, module.azure[*].containers, module.gcp[*].containers))
+    functions           = one(concat(module.aws[*].functions, module.azure[*].functions, module.gcp[*].functions))
+    kms_key_id          = one(concat(module.aws[*].kms_key_id, module.azure[*].kms_key_id, module.gcp[*].kms_key_id))
     tags                = one(concat(module.aws[*].tags, module.azure[*].tags, module.gcp[*].tags))
   }
 }
@@ -73,6 +78,31 @@ output "servers" {
 output "nat_public_ip" {
   description = "Static egress IP of the NAT gateway (null when NAT is disabled)."
   value       = local.selected.nat_public_ip
+}
+
+output "kubernetes" {
+  description = "Kubernetes cluster: { name, id, endpoint, version, kubeconfig_command } (null when disabled)."
+  value       = local.selected.kubernetes
+}
+
+output "databases" {
+  description = "Map of database key => { engine, endpoint, port, database, username, credentials_secret }."
+  value       = local.selected.databases
+}
+
+output "containers" {
+  description = "Map of container key => { url } (null url for private services)."
+  value       = local.selected.containers
+}
+
+output "functions" {
+  description = "Map of function key => { name, url }."
+  value       = local.selected.functions
+}
+
+output "kms_key_id" {
+  description = "Customer-managed key ID (AWS KMS / Cloud KMS; null on Azure or when disabled)."
+  value       = local.selected.kms_key_id
 }
 
 output "tags" {

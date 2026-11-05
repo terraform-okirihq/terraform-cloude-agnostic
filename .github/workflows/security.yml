@@ -56,6 +56,7 @@ jobs:
           format: sarif
           output: trivy.sarif
           severity: CRITICAL,HIGH,MEDIUM
+          trivyignores: .trivyignore.yaml
           exit-code: "0" # report to the Security tab; set "1" to block merges
       - uses: github/codeql-action/upload-sarif@v4
         if: always() && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
@@ -75,13 +76,23 @@ jobs:
         with:
           directory: .
           framework: terraform
+          config_file: .checkov.yaml
           output_format: sarif
           output_file_path: results
           soft_fail: true # report to the Security tab; set false to block merges
+      # Checkov keeps inline-skipped results in SARIF (as suppressed); GitHub would
+      # still open alerts for them, so remove them before upload.
+      - name: Drop suppressed results
+        if: always()
+        run: |
+          mkdir -p checkov-sarif
+          for f in results/*.sarif; do
+            jq '(.runs[].results) |= map(select((.suppressions // []) | length == 0))' "$f" > "checkov-sarif/$(basename "$f")"
+          done
       - uses: github/codeql-action/upload-sarif@v4
         if: always() && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
         with:
-          sarif_file: results # directory: checkov picks the file name
+          sarif_file: checkov-sarif
           category: checkov
 
   dependency-review:

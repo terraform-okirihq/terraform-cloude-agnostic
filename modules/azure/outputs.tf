@@ -76,3 +76,62 @@ output "network_security_group_id" {
   description = "NSG associated with every subnet."
   value       = azurerm_network_security_group.this.id
 }
+
+output "kubernetes" {
+  description = "Kubernetes cluster: { name, id, endpoint, version, kubeconfig_command } (null when disabled)."
+  value = local.k8s_enabled ? {
+    name               = azurerm_kubernetes_cluster.this[0].name
+    id                 = azurerm_kubernetes_cluster.this[0].id
+    endpoint           = "https://${coalesce(azurerm_kubernetes_cluster.this[0].fqdn, azurerm_kubernetes_cluster.this[0].private_fqdn)}"
+    version            = azurerm_kubernetes_cluster.this[0].current_kubernetes_version
+    kubeconfig_command = "az aks get-credentials --resource-group ${local.resource_group_name} --name ${azurerm_kubernetes_cluster.this[0].name} && kubelogin convert-kubeconfig -l azurecli"
+  } : null
+}
+
+output "databases" {
+  description = "Map of database key => { engine, endpoint, port, database, username, credentials_secret }."
+  value = {
+    for k, d in local.databases : k => {
+      engine             = d.engine
+      endpoint           = d.engine == "postgres" ? azurerm_postgresql_flexible_server.this[k].fqdn : azurerm_mysql_flexible_server.this[k].fqdn
+      port               = d.port
+      database           = d.db_name
+      username           = "dbadmin"
+      credentials_secret = azurerm_key_vault_secret.databases[k].versionless_id
+    }
+  }
+}
+
+output "containers" {
+  description = "Map of container key => { url } (url is null for private services)."
+  value = {
+    for k, c in local.containers : k => {
+      url = c.public ? "https://${azurerm_container_app.this[k].ingress[0].fqdn}" : null
+    }
+  }
+}
+
+output "functions" {
+  description = "Map of function key => { name, url }."
+  value = {
+    for k, f in azurerm_function_app_flex_consumption.this : k => {
+      name = f.name
+      url  = "https://${f.default_hostname}"
+    }
+  }
+}
+
+output "kms_key_id" {
+  description = "Customer-managed key ID. Always null on Azure: data uses Microsoft-managed keys."
+  value       = null
+}
+
+output "key_vault_id" {
+  description = "Key Vault holding generated secrets (null without databases)."
+  value       = one(azurerm_key_vault.this[*].id)
+}
+
+output "log_analytics_workspace_id" {
+  description = "Log Analytics workspace receiving logs and metrics."
+  value       = azurerm_log_analytics_workspace.this.id
+}

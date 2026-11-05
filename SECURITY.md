@@ -18,6 +18,17 @@ Please include the affected version, the cloud, a minimal configuration and the
 impact. You can expect an acknowledgement within 5 working days and a fix or
 mitigation plan within 30 days for confirmed issues.
 
+## Accepted scanner findings
+
+Trivy and Checkov scan every pull request. Findings that reflect deliberate
+design decisions are recorded, with the reason for each, in:
+
+- [.checkov.yaml](.checkov.yaml) for module-wide decisions, plus inline
+  `#checkov:skip=<ID>:<reason>` comments on specific resources
+- [.trivyignore.yaml](.trivyignore.yaml)
+
+Changing one of these entries needs a reviewed pull request, like any other change.
+
 ## How this repository is protected
 
 - **Secret scanning**: gitleaks scans the full git history on every PR, and GitHub push protection blocks secrets before they land.

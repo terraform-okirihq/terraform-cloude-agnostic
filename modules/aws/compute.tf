@@ -100,6 +100,7 @@ resource "aws_instance" "server" {
     volume_type           = "gp3"
     volume_size           = each.value.disk_size_gb
     encrypted             = true
+    kms_key_id            = local.kms_key_arn
     delete_on_termination = true
     tags                  = merge(local.tags, { Name = "${local.name_prefix}-${each.key}" })
   }

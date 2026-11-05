@@ -8,7 +8,13 @@ mock_provider "azurerm" {
 mock_provider "google" {
   source = "./tests/mocks/google"
 }
-mock_provider "random" {}
+mock_provider "random" {
+  source = "./tests/mocks/random"
+}
+mock_provider "archive" {
+  source = "./tests/mocks/archive"
+}
+mock_provider "time" {}
 
 variables {
   name        = "acme"
@@ -58,7 +64,7 @@ run "gcp" {
   }
 
   assert {
-    condition     = output.network_name == "acme-test-vpc" && length(output.subnet_ids) == 2
+    condition     = output.network_name == "acme-test-vpc" && length(output.subnet_ids) == 4
     error_message = "GCP selection produced unexpected outputs."
   }
 }

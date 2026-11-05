@@ -1,0 +1,64 @@
+# Checkov configuration. Each skipped check is a deliberate design decision;
+# the reason is next to it. Resource-specific exceptions live inline in the
+# Terraform as "#checkov:skip=<ID>:<reason>". See SECURITY.md.
+framework:
+  - terraform
+skip-check:
+  # --- AWS ---------------------------------------------------------------
+  - CKV_AWS_18        # S3 server access logs: CloudTrail data events are the recommended audit trail
+  - CKV_AWS_144       # S3 cross-region replication: a DR choice, not a default for every bucket
+  - CKV2_AWS_62       # S3 event notifications: nothing consumes them
+  - CKV_AWS_39        # EKS public endpoint: controlled by kubernetes.public_endpoint / authorized_cidrs
+  - CKV_AWS_58        # EKS secrets encryption: dynamic block with the CMK (on by default); EKS also encrypts by default
+  - CKV_AWS_157       # RDS Multi-AZ: controlled by databases.*.high_availability
+  - CKV_AWS_133       # RDS backups: retention comes from databases.*.backup_retention_days (7-35), not resolvable statically
+  - CKV_AWS_115       # Lambda reserved concurrency: reserving it can fail on accounts with low limits
+  - CKV_AWS_116       # Lambda DLQ: functions are invoked synchronously over HTTP; a DLQ only applies to async invokes
+  - CKV_AWS_272       # Lambda code signing: needs a signing profile owned by the user
+  - CKV2_AWS_76       # WAF Log4j rules: AWSManagedRulesKnownBadInputsRuleSet is attached; the check cannot follow
+                      # the for_each association (asserted in tests/aws.tftest.hcl)
+  # --- Azure -------------------------------------------------------------
+  - CKV2_AZURE_1      # Storage CMK: Azure uses Microsoft-managed keys in this module (documented)
+  - CKV2_AZURE_33     # Storage private endpoint: Terraform must reach the data plane to create containers
+  - CKV_AZURE_59      # Storage public network access: same reason; anonymous blob access is disabled
+  - CKV2_AZURE_40     # Shared key auth: Flex Consumption deployment storage authenticates with the account key
+  - CKV_AZURE_206     # Storage replication: controlled by azure.storage_replication_type
+  - CKV_AZURE_33      # Queue service logging: the module creates no queues
+  - CKV2_AZURE_21     # Blob read logging: sent to Log Analytics via diagnostic settings
+  - CKV2_AZURE_32     # Key Vault private endpoint: Terraform must reach the vault to write secrets
+  - CKV_AZURE_109     # Key Vault firewall: same reason; access is RBAC-only
+  - CKV_AZURE_189     # Key Vault public network access: same reason
+  - CKV_AZURE_41      # Secret expiry: generated database passwords do not expire on a schedule
+  - CKV2_AZURE_41     # SAS expiration policy: sas_policy is set (1 day) but not recognised by the check
+  - CKV_AZURE_115     # AKS private cluster: controlled by kubernetes.public_endpoint
+  - CKV_AZURE_117     # AKS disk encryption set: Azure CMK not implemented in this module (documented)
+  - CKV_AZURE_226     # AKS ephemeral OS disk: default node sizes have no local temp disk
+  - CKV_AZURE_227     # AKS host encryption: needs the EncryptionAtHost subscription feature
+  - CKV_AZURE_232     # AKS critical-addons-only system pool: the module deploys a single node pool
+  - CKV_AZURE_136     # PostgreSQL geo-redundant backup: cost/DR choice
+  - CKV_AZURE_94      # MySQL geo-redundant backup: cost/DR choice
+  - CKV_AZURE_53      # MySQL public access: set via public_network_access = "Disabled" (check reads an older attribute)
+  - CKV_AZURE_212     # App Service minimum instances: Flex Consumption scales from zero
+  - CKV_AZURE_225     # App Service Plan zone redundancy: not applicable to Flex Consumption
+  # --- GCP ---------------------------------------------------------------
+  - CKV_GCP_62        # Bucket access logs: use Cloud Audit Logs data-access logs instead
+  - CKV_GCP_12        # GKE network policy: provided by Dataplane V2 (ADVANCED_DATAPATH)
+  - CKV_GCP_21        # GKE labels: set via resource_labels from a local (not resolvable statically)
+  - CKV_GCP_69        # GKE metadata server: enabled on the node pool (GKE_METADATA)
+  - CKV_GCP_61        # GKE intranode visibility: adds flow-log cost; VPC flow logs are on
+  - CKV_GCP_65        # GKE Google Groups RBAC: requires a Workspace domain group
+  - CKV_GCP_66        # Binary Authorization: requires the API and a user-defined policy
+  - CKV_GCP_6         # Cloud SQL SSL: enforced with ssl_mode = ENCRYPTED_ONLY (check reads the deprecated require_ssl)
+  - CKV_GCP_38        # Customer-supplied disk keys (CSEK): CMEK via Cloud KMS is the supported approach
+  - CKV_GCP_40        # VM public IPs: only when servers.*.public_ip = true
+  - CKV_GCP_82        # KMS prevent_destroy: would block destroying an environment
+  # PostgreSQL flags are set in a dynamic block (PostgreSQL only), which Checkov
+  # cannot evaluate. tests/gcp.tftest.hcl asserts they are applied.
+  - CKV_GCP_51        # log_checkpoints = on
+  - CKV_GCP_52        # log_connections = on
+  - CKV_GCP_53        # log_disconnections = on
+  - CKV_GCP_54        # log_lock_waits = on
+  - CKV_GCP_108       # log_hostname = on
+  - CKV_GCP_109       # log_min_messages = error
+  - CKV_GCP_110       # cloudsql.enable_pgaudit = on
+  - CKV_GCP_111       # log_statement = ddl

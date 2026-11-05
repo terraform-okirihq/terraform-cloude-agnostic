@@ -49,7 +49,7 @@ run "default_subnets_follow_network_cidr" {
   }
 
   assert {
-    condition     = output.subnets.public.cidr == "172.20.0.0/24" && output.subnets.private.cidr == "172.20.10.0/24"
+    condition     = output.subnets["public-a"].cidr == "172.20.0.0/24" && output.subnets["public-b"].cidr == "172.20.1.0/24" && output.subnets["private-a"].cidr == "172.20.10.0/24" && output.subnets["private-b"].cidr == "172.20.11.0/24"
     error_message = "Default subnets not derived from network_cidr."
   }
 }
@@ -162,4 +162,73 @@ run "port_range_normalised" {
     condition     = output.ingress_rules[0].port_range == "22" && output.ingress_rules[1].port_range == "8000-8080"
     error_message = "port_range not normalised."
   }
+}
+
+run "servers_default_to_first_private_subnet" {
+  command = plan
+  module {
+    source = "./modules/context"
+  }
+
+  variables {
+    servers    = { api = {} }
+    kubernetes = { enabled = true }
+  }
+
+  assert {
+    condition     = output.servers["api"].subnet == "private-a" && tolist(output.kubernetes.subnets) == tolist(["private-a", "private-b"])
+    error_message = "Workloads should default to private subnets."
+  }
+}
+
+run "rejects_bad_database" {
+  command = plan
+  module {
+    source = "./modules/context"
+  }
+
+  variables {
+    databases = { app = { engine = "oracle" } }
+  }
+
+  expect_failures = [var.databases]
+}
+
+run "rejects_bad_function_runtime" {
+  command = plan
+  module {
+    source = "./modules/context"
+  }
+
+  variables {
+    functions = { api = { source_dir = ".", runtime = "ruby3.3" } }
+  }
+
+  expect_failures = [var.functions]
+}
+
+run "rejects_bad_kubernetes_scaling" {
+  command = plan
+  module {
+    source = "./modules/context"
+  }
+
+  variables {
+    kubernetes = { enabled = true, node_min = 5, node_max = 2 }
+  }
+
+  expect_failures = [var.kubernetes]
+}
+
+run "rejects_bad_retention" {
+  command = plan
+  module {
+    source = "./modules/context"
+  }
+
+  variables {
+    monitoring = { log_retention_days = 45 }
+  }
+
+  expect_failures = [var.monitoring]
 }
