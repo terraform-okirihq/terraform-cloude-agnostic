@@ -80,6 +80,14 @@ jobs:
           output_format: sarif
           output_file_path: results
           soft_fail: true # report to the Security tab; set false to block merges
+      # Checkov keeps inline-skipped results in SARIF (as suppressed); GitHub would
+      # still open alerts for them, so remove them before upload.
+      - name: Drop suppressed results
+        if: always()
+        run: |
+          for f in results/*.sarif; do
+            jq '(.runs[].results) |= map(select((.suppressions // []) | length == 0))' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+          done
       - uses: github/codeql-action/upload-sarif@v4
         if: always() && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork)
         with:

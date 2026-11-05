@@ -164,6 +164,7 @@ resource "random_id" "alb_logs" {
 }
 
 resource "aws_s3_bucket" "alb_logs" {
+  #checkov:skip=CKV_AWS_145:ALB access logs only support SSE-S3, not KMS
   count = local.create_alb ? 1 : 0
 
   region        = var.region
@@ -194,7 +195,6 @@ resource "aws_s3_bucket_versioning" "alb_logs" {
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "alb_logs" {
-  #checkov:skip=CKV_AWS_145:ALB access logs only support SSE-S3, not KMS
   count = local.create_alb ? 1 : 0
 
   region = var.region
@@ -312,6 +312,7 @@ resource "aws_lb" "containers" {
 }
 
 resource "aws_lb_target_group" "containers" {
+  #checkov:skip=CKV_AWS_378:Load balancer to task traffic stays inside the VPC; TLS terminates at the ALB
   for_each = local.public_containers
 
   region      = var.region
@@ -379,8 +380,7 @@ resource "aws_lb_listener" "containers_https" {
 # --- AWS WAF in front of public load balancers -----------------------------
 
 locals {
-  waf_managed_rules = ["AWSManagedRulesCommonRuleSet", "AWSManagedRulesKnownBadInputsRuleSet", "AWSManagedRulesAmazonIpReputationList"]
-  create_waf        = local.create_alb && var.enable_waf
+  create_waf = local.create_alb && var.enable_waf
 }
 
 resource "aws_wafv2_web_acl" "containers" {
@@ -395,28 +395,70 @@ resource "aws_wafv2_web_acl" "containers" {
     allow {}
   }
 
-  dynamic "rule" {
-    for_each = local.waf_managed_rules
-    content {
-      name     = rule.value
-      priority = rule.key + 1
+  rule {
+    name     = "AWSManagedRulesCommonRuleSet"
+    priority = 1
 
-      override_action {
-        none {}
-      }
+    override_action {
+      none {}
+    }
 
-      statement {
-        managed_rule_group_statement {
-          name        = rule.value
-          vendor_name = "AWS"
-        }
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
       }
+    }
 
-      visibility_config {
-        cloudwatch_metrics_enabled = true
-        metric_name                = rule.value
-        sampled_requests_enabled   = true
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesCommonRuleSet"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Includes the Log4JRCE rule.
+  rule {
+    name     = "AWSManagedRulesKnownBadInputsRuleSet"
+    priority = 2
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
       }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesKnownBadInputsRuleSet"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "AWSManagedRulesAmazonIpReputationList"
+    priority = 3
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesAmazonIpReputationList"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesAmazonIpReputationList"
+      sampled_requests_enabled   = true
     }
   }
 

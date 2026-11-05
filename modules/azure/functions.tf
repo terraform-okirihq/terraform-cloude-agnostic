@@ -31,7 +31,7 @@ resource "azurerm_storage_account" "functions" {
   infrastructure_encryption_enabled = true
 
   sas_policy {
-    expiration_period = "01.00:00:00"
+    expiration_period = "1.00:00:00"
     expiration_action = "Log"
   }
 

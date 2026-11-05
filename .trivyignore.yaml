@@ -13,6 +13,9 @@ misconfigurations:
     statement: EKS public endpoint is controlled by kubernetes.public_endpoint
   - id: AWS-0041
     statement: EKS endpoint CIDRs are controlled by kubernetes.authorized_cidrs
+  - id: AWS-0132
+    paths: ["modules/aws/containers.tf"]
+    statement: ALB access logs only support SSE-S3; the bucket cannot use a KMS key
   - id: AWS-0089
     statement: S3 server access logs are not required; use CloudTrail data events
   - id: AZU-0012
