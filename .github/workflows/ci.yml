@@ -21,8 +21,8 @@ jobs:
     name: fmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
       - run: terraform fmt -check -recursive -diff
 
   validate:
@@ -44,8 +44,8 @@ jobs:
           - examples/multi-cloud
           - examples/platform
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
       - working-directory: ${{ matrix.dir }}
         run: |
           terraform init -backend=false -input=false
@@ -54,8 +54,8 @@ jobs:
   tflint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: terraform-linters/setup-tflint@v4
+      - uses: actions/checkout@v7
+      - uses: terraform-linters/setup-tflint@v6
       - run: tflint --init
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -69,8 +69,8 @@ jobs:
       matrix:
         terraform: ["1.9.8", "latest"] # minimum supported + newest
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
