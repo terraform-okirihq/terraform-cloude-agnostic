@@ -19,7 +19,7 @@ jobs:
     name: release-please
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v5
         with:
           # A dedicated token lets release PRs trigger CI (PRs opened with the
           # built-in GITHUB_TOKEN do not) and avoids needing the org setting
