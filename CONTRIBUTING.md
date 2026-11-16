@@ -64,6 +64,10 @@ Releases are fully automated with [release-please](https://github.com/googleapis
 2. A maintainer merges the release PR when it's time to ship.
 3. That creates the `vX.Y.Z` tag and GitHub Release, and the Terraform Registry publishes the new version automatically.
 
+The release workflow uses the `RELEASE_PLEASE_TOKEN` repository secret: a fine-grained
+personal access token (or GitHub App token) limited to this repository with
+**Contents** and **Pull requests** set to read/write.
+
 ## Design rules
 
 - `modules/aws`, `modules/azure` and `modules/gcp` must keep an **identical shared
