@@ -6,7 +6,7 @@ input/output interface of the other cloud modules - see the
 
 ```hcl
 module "foundation" {
-  source  = "<namespace>/foundation/multicloud//modules/gcp"
+  source  = "terraform-okirihq/foundation/multicloud//modules/gcp"
   version = "~> 0.1"
   # ...
 }

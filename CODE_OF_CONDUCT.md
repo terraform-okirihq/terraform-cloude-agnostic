@@ -10,7 +10,7 @@ discriminatory language are not tolerated.
 
 Report unacceptable behaviour privately to the maintainer, Gabriel Okiri
 ([@OkiriGabriel](https://github.com/OkiriGabriel)), through GitHub's
-[private reporting form](https://github.com/terraform-okirihq/terraform-cloude-agnostic/security/advisories/new)
+[private reporting form](https://github.com/terraform-okirihq/terraform-multicloud-foundation/security/advisories/new)
 or a direct message. Reports are handled confidentially. Maintainers may remove
 comments, commits or contributions, and may ban contributors who violate this
 code of conduct.

@@ -1,8 +1,8 @@
 # terraform-multicloud-foundation
 
-[![ci](https://github.com/terraform-okirihq/terraform-cloude-agnostic/actions/workflows/ci.yml/badge.svg)](https://github.com/terraform-okirihq/terraform-cloude-agnostic/actions/workflows/ci.yml)
-[![security](https://github.com/terraform-okirihq/terraform-cloude-agnostic/actions/workflows/security.yml/badge.svg)](https://github.com/terraform-okirihq/terraform-cloude-agnostic/actions/workflows/security.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/terraform-okirihq/terraform-cloude-agnostic/badge)](https://scorecard.dev/viewer/?uri=github.com/terraform-okirihq/terraform-cloude-agnostic)
+[![ci](https://github.com/terraform-okirihq/terraform-multicloud-foundation/actions/workflows/ci.yml/badge.svg)](https://github.com/terraform-okirihq/terraform-multicloud-foundation/actions/workflows/ci.yml)
+[![security](https://github.com/terraform-okirihq/terraform-multicloud-foundation/actions/workflows/security.yml/badge.svg)](https://github.com/terraform-okirihq/terraform-multicloud-foundation/actions/workflows/security.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/terraform-okirihq/terraform-multicloud-foundation/badge)](https://scorecard.dev/viewer/?uri=github.com/terraform-okirihq/terraform-multicloud-foundation)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A production-ready, cloud-agnostic Terraform module that deploys the same
@@ -70,7 +70,7 @@ provider "aws" {
 }
 
 module "foundation" {
-  source  = "<namespace>/foundation/multicloud//modules/aws"
+  source  = "terraform-okirihq/foundation/multicloud//modules/aws"
   version = "~> 0.1"
 
   name        = "acme"
@@ -96,7 +96,7 @@ The same call on GCP:
 
 ```hcl
 module "foundation" {
-  source  = "<namespace>/foundation/multicloud//modules/gcp"
+  source  = "terraform-okirihq/foundation/multicloud//modules/gcp"
   version = "~> 0.1"
 
   name        = "acme"
@@ -113,7 +113,7 @@ Every service uses the same inputs on every cloud. See
 
 ```hcl
 module "platform" {
-  source  = "<namespace>/foundation/multicloud//modules/azure"   # or aws / gcp
+  source  = "terraform-okirihq/foundation/multicloud//modules/azure"   # or aws / gcp
   version = "~> 0.1"
 
   name   = "acme"
@@ -285,18 +285,19 @@ rules in `modules/context`.
 
 ## Publishing to the Terraform Registry
 
-1. Push this code to a **public GitHub repo** named `terraform-<provider>-<name>`,
-   for example `terraform-multicloud-foundation`. The registry requires this naming.
-2. Sign in to [registry.terraform.io](https://registry.terraform.io) with GitHub and
-   choose **Publish → Module**, then pick the repo. For a private registry, publish it
-   in HCP Terraform under **Registry → Publish → Module** instead.
-3. Run `./scripts/setup-github.sh <owner>/terraform-multicloud-foundation` once to
-   apply branch protection and turn on the security features.
-4. Releases are automated. [release-please](.github/workflows/release.yml) keeps a
-   release PR open; merging it creates the `vX.Y.Z` tag, which the registry
+The module is published from
+[terraform-okirihq/terraform-multicloud-foundation](https://github.com/terraform-okirihq/terraform-multicloud-foundation)
+as `terraform-okirihq/foundation/multicloud`. The Registry requires the
+`terraform-<provider>-<name>` repository naming.
+
+1. Sign in to [registry.terraform.io](https://registry.terraform.io) with GitHub,
+   choose **Publish → Module** and select the repository. For a private registry,
+   publish it in HCP Terraform under **Registry → Publish → Module** instead.
+2. Releases are automated. [release-please](.github/workflows/release.yml) keeps a
+   release PR open; merging it creates the `vX.Y.Z` tag, which the Registry
    publishes automatically.
-5. Replace `<namespace>` in these docs with your registry namespace (your GitHub
-   user or org).
+3. Repository hardening (branch protection, security features) is applied once with
+   `./scripts/setup-github.sh terraform-okirihq/terraform-multicloud-foundation`.
 
 ## Contributing
 

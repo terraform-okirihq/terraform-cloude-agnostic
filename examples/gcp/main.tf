@@ -24,7 +24,7 @@ provider "google" {
 }
 
 module "foundation" {
-  # Registry: source = "<namespace>/foundation/multicloud//modules/gcp"
+  # Registry: source = "terraform-okirihq/foundation/multicloud//modules/gcp"
   source = "../../modules/gcp"
 
   name         = "acme"

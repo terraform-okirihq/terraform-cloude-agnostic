@@ -53,7 +53,7 @@ provider "google" {
 }
 
 module "foundation" {
-  # Registry: source = "<namespace>/foundation/multicloud"
+  # Registry: source = "terraform-okirihq/foundation/multicloud"
   source = "../.."
 
   cloud       = var.cloud
