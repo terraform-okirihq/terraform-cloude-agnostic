@@ -25,7 +25,7 @@ variable "environment" {
 }
 
 module "foundation" {
-  # Registry: source = "<namespace>/foundation/multicloud//modules/azure"
+  # Registry: source = "terraform-okirihq/foundation/multicloud//modules/azure"
   source = "../../modules/azure"
 
   name         = "acme"

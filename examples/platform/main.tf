@@ -30,7 +30,7 @@ variable "alert_email" {
 }
 
 module "platform" {
-  # Registry: source = "<namespace>/foundation/multicloud//modules/aws"
+  # Registry: source = "terraform-okirihq/foundation/multicloud//modules/aws"
   source = "../../modules/aws"
 
   name        = "acme"
